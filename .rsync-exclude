@@ -1,0 +1,8 @@
+# Correct relative patterns
+.git/
+__pycache__/
+venv/
+node_modules/
+.DS_Store
+*.pyc
+.env

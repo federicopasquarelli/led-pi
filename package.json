@@ -1,0 +1,15 @@
+{
+  "name": "led-py",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "sync": "nodemon --watch './**/*.py' --ext py --exec \"rsync -avz --exclude-from='.rsync-exclude' . pi@raspberrypi.local:/home/pi/led-py/\""
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
