@@ -65,3 +65,11 @@ class WeatherWidget(Widget):
         if self.data["icon"]: canvas.SetImage(self.data["icon"], 2, 45)
         graphics.DrawText(canvas, self.font_sm, 16, 50, self.blue, self.data["temp"])
         self.scroller.draw(canvas)
+
+    @property
+    def should_show(self):
+        return True
+
+    @property
+    def priority(self):
+        return 0

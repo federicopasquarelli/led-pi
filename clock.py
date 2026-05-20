@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from rgbmatrix import RGBMatrix, RGBMatrixOptions, graphics
 from weather_widget import WeatherWidget
 from volumio_widget import VolumioWidget
+from widget_manager import WidgetManager
 
 # Load environment variables
 load_dotenv()
@@ -45,33 +46,11 @@ LAYOUT = {
 }
 
 # 4. Widget Orchestration
-stop_time = None
-
-def on_volumio_state_change(state):
-    global active_widget, ACTIVE_WIDGET_INDEX, stop_time
-    target_index = 1 if state in ['play', 'pause'] else 0
-    
-    if target_index == 1:
-        stop_time = None
-    elif ACTIVE_WIDGET_INDEX == 1 and target_index == 0:
-        if stop_time is None:
-            stop_time = time.time()
-        return
-
-    if target_index != ACTIVE_WIDGET_INDEX:
-        active_widget.deactivate()
-        ACTIVE_WIDGET_INDEX = target_index
-        active_widget = widgets[ACTIVE_WIDGET_INDEX]
-        active_widget.activate()
-
-# Initialize widgets
 weather_w = WeatherWidget(font_sm, blue, yellow)
-volumio_w = VolumioWidget(font_sm, font_md, blue, white, yellow, on_volumio_state_change)
+volumio_w = VolumioWidget(font_sm, font_md, blue, white, yellow)
 
-widgets = [weather_w, volumio_w]
-ACTIVE_WIDGET_INDEX = 0
-active_widget = widgets[ACTIVE_WIDGET_INDEX]
-active_widget.activate()
+# Initialize WidgetManager with Weather as fallback (index 0)
+manager = WidgetManager([weather_w, volumio_w])
 
 def get_current_data(now):
     return {
@@ -103,9 +82,9 @@ def draw_app(canvas, data, timestamp):
     x3, y3 = LAYOUT["pos_3"]
     graphics.DrawText(canvas, font_md, x3, y3, white, data["date"])
     
-    # Update and Draw Active Widget
-    active_widget.update(data, timestamp)
-    active_widget.draw(canvas, timestamp)
+    # Update and Draw Widgets via Manager
+    manager.update(data, timestamp)
+    manager.draw(canvas, timestamp)
 
 # 5. Main Loop
 try:
@@ -115,15 +94,6 @@ try:
         update_brightness(matrix, now)
         data = get_current_data(now)
         
-        # Delayed transition from Volumio to Weather
-        if stop_time and timestamp - stop_time > 10:
-            stop_time = None
-            if ACTIVE_WIDGET_INDEX == 1:
-                active_widget.deactivate()
-                ACTIVE_WIDGET_INDEX = 0
-                active_widget = widgets[ACTIVE_WIDGET_INDEX]
-                active_widget.activate()
-
         canvas.Clear()
         draw_app(canvas, data, timestamp)
         canvas = matrix.SwapOnVSync(canvas)

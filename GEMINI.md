@@ -3,17 +3,17 @@
 This project manages a 64x64 RGB LED Matrix display using a Raspberry Pi. It features a clock with weather updates and scrolling Volumio playback information.
 
 ## Hardware & Environment
-- **Matrix Size**: 64x64 (configured in `config.py`).
-- **Hardware Mapping**: `adafruit-hat`.
+- **Matrix Size**: 64x64 (configured in `.env`).
+- **Hardware Mapping**: `adafruit-hat` (configured in `.env`).
 - **Optimization**: PWM bits are set to 11 for Pi 3 stability to prevent flickering.
 
 ## Architecture
 - `clock.py`: Main entry point. Handles the display loop, brightness management, and widget orchestration.
-- `base_widget.py`: Defines the `Widget` interface for modular display components.
+- `base_widget.py`: Defines the `Widget` interface (`update(data, timestamp)`, `draw(canvas, timestamp)`).
 - `weather_widget.py`: Fetches and displays weather data (temp, condition, icon).
 - `volumio_widget.py`: Real-time playback info via SocketIO. Features integrated progress/volume text and state-driven colors.
 - `scroll_utils.py`: Provides the `ScrollText` class for horizontal scrolling within defined bounds.
-- `config.py`: Centralized configuration for API keys, city, and hardware settings.
+- `.env`: Centralized configuration for API keys, city, and hardware settings.
 - `fonts/`: Directory containing `.bdf` font files.
 
 ## Engineering Standards
@@ -27,6 +27,3 @@ This project manages a 64x64 RGB LED Matrix display using a Raspberry Pi. It fea
 - **Weather Updates**: Fetched in a background thread every 5 minutes. Icons are processed into RGBA with a black background before being converted to RGB for the matrix.
 - **Layout Integrity**: Maintain the 64x64 grid layout. Day, Date, Time, and widget-specific elements have fixed positions to prevent overlapping.
 - **Performance**: Use `SwapOnVSync` for smooth transitions. Avoid heavy processing within the main loop.
-
-
-Session Id gemini --resume 1c8a05ed-5f07-4bfb-98d6-d8572999d39f

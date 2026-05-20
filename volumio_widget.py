@@ -8,15 +8,15 @@ from scroll_utils import ScrollText
 from base_widget import Widget
 
 class VolumioWidget(Widget):
-    def __init__(self, font_sm, font_md, blue, white, yellow, on_state_change):
+    def __init__(self, font_sm, font_md, blue, white, yellow):
         self.font_sm = font_sm
         self.font_md = font_md
         self.blue = blue
         self.white = white
         self.yellow = yellow
         self.red = graphics.Color(255, 0, 0)
-        self.on_state_change = on_state_change
         self.last_pause_time = None
+        self.stop_time = None
         self.volumio_host = os.getenv("VOLUMIO_HOST")
         self.data = {
             "text": "stop",
@@ -47,13 +47,19 @@ class VolumioWidget(Widget):
                     self.data["status"] = "stop"
                     self.data["text"] = "stop"
                     self.last_pause_time = None
-                    self.on_state_change("stop")
 
                 def on_push_state(*args):
                     data = args[0]
                     print(f"[{datetime.now().strftime('%H:%M:%S')}] Volumio: Received state update - Status: {data.get('status', 'N/A')}, Artist: {data.get('artist', 'N/A')}, Title: {data.get('title', 'N/A')}, Duration: {data.get('duration', 'N/A')}, Seek: {data.get('seek', 'N/A')}, Volume: {data.get('volume', 'N/A')}, Service: {data.get('service', 'N/A')}")
                     
                     new_status = data.get('status', 'stop')
+                    
+                    # Track when we stop for the delay logic
+                    if self.data["status"] in ['play', 'pause'] and new_status == 'stop':
+                        self.stop_time = time.time()
+                    elif new_status in ['play', 'pause']:
+                        self.stop_time = None
+
                     self.data["status"] = new_status
                     self.data["seek"] = data.get('seek', 0)
                     self.data["duration"] = data.get('duration', 0)
@@ -74,15 +80,12 @@ class VolumioWidget(Widget):
                         
                         if new_status == 'play':
                             self.last_pause_time = None
-                            self.on_state_change("play")
                         elif new_status == 'pause':
                             if self.last_pause_time is None:
                                 self.last_pause_time = time.time()
-                            self.on_state_change("pause")
                     else:
                         self.data["text"] = "stop"
                         self.last_pause_time = None
-                        self.on_state_change("stop")
 
                 socketIO.on('connect', on_connect)
                 socketIO.on('disconnect', on_disconnect)
@@ -93,7 +96,6 @@ class VolumioWidget(Widget):
                 self.data["status"] = "stop"
                 self.data["text"] = "stop"
                 self.last_pause_time = None
-                self.on_state_change("stop")
                 time.sleep(60)
 
     def activate(self): pass
@@ -102,11 +104,12 @@ class VolumioWidget(Widget):
     def update(self, data, timestamp):
         self.scroller.update_text(self.data["text"])
         
-        # Handle pause timeout (return to weather after 5 minutes)
+        # Handle pause timeout (self-transition by lowering priority/should_show)
         if self.data["status"] == 'pause' and self.last_pause_time:
             if timestamp - self.last_pause_time > 300:
-                self.on_state_change("stop")
-                self.last_pause_time = None
+                # We don't call anything, we just update internal state so should_show becomes False
+                self.data["status"] = 'stop' 
+                self.stop_time = timestamp # Start the 10s stop delay from now
 
     def _draw_play_icon(self, canvas, x, y, color):
         # Simple 4x6 triangle
@@ -153,3 +156,14 @@ class VolumioWidget(Widget):
             
             # Position next to icon (Icon is at x=2, y=38)
             graphics.DrawText(canvas, self.font_sm, 10, 44, current_color, time_str)
+
+    @property
+    def should_show(self):
+        # Show if playing, paused, or if we stopped recently (10s delay)
+        is_playing_or_paused = self.data["status"] in ['play', 'pause']
+        stopped_recently = self.data["status"] == 'stop' and self.stop_time and (time.time() - self.stop_time < 10)
+        return is_playing_or_paused or stopped_recently
+
+    @property
+    def priority(self):
+        return 10 if self.should_show else 0

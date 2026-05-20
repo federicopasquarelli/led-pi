@@ -62,4 +62,4 @@ sudo python clock.py
 - `fonts/`: BDF font files.
 
 ## License
-[MIT](LICENSE) (or specify your license)
+This project is open source and free to use.
